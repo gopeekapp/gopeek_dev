@@ -1,0 +1,37 @@
+{
+  "manifest_version": 3,
+  "name": "GoPeek",
+  "version": "1.0",
+  "description": "Open links in live mini browser windows without creating new tabs.",
+  "permissions": [
+    "declarativeNetRequest",
+    "declarativeNetRequestWithHostAccess",
+    "storage",
+    "contextMenus",
+    "tabs"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "all_frames": true,
+      "run_at": "document_start"
+    }
+  ],
+  "icons": {
+    "128": "GoPeek_Logo.png"
+  }
+}
