@@ -7,7 +7,6 @@
     "declarativeNetRequest",
     "declarativeNetRequestWithHostAccess",
     "storage",
-    "contextMenus",
     "tabs"
   ],
   "host_permissions": [
