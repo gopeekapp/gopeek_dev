@@ -100,15 +100,15 @@ if (window !== window.top && window.name.startsWith('gopeak-frame')) {
     let needsUpdate = false;
     for (let m of mutations) {
       if (m.target.nodeName === 'TITLE' || m.target.nodeName === 'META') {
-          needsUpdate = true;
-          break; // Stop looping once we find what we need
+        needsUpdate = true;
+        break; // Stop looping once we find what we need
       }
     }
-    
+
     // Batch the postMessage calls
     if (needsUpdate) {
-        clearTimeout(observerThrottle);
-        observerThrottle = setTimeout(reportState, 150);
+      clearTimeout(observerThrottle);
+      observerThrottle = setTimeout(reportState, 150);
     }
   });
 
@@ -315,7 +315,7 @@ else if (window === window.top) {
 
         const freshIframe = document.createElement('iframe');
         freshIframe.id = 'content-frame';
-        freshIframe.name = this.frameName; 
+        freshIframe.name = this.frameName;
         freshIframe.src = newUrl;
 
         this.iframe.replaceWith(freshIframe);
@@ -361,9 +361,14 @@ else if (window === window.top) {
       }
 
       show() {
-        this.browser.classList.add('visible');
-        this.isVisible = true;
-        this.isClosing = false;
+        // Safer than offsetHeight — only reads computed style, no full reflow
+        window.getComputedStyle(this.browser).opacity;
+
+        queueMicrotask(() => {
+          this.browser.classList.add('visible');
+          this.isVisible = true;
+          this.isClosing = false;
+        });
       }
 
       cancelPreload() {
@@ -486,7 +491,7 @@ else if (window === window.top) {
       close() {
         this.isClosing = true;
         this.isVisible = false;
-        this.browser.classList.remove('dragging'); 
+        this.browser.classList.remove('dragging');
 
         if (this.isSnapped && settings.hp_sidebar_mode === 'split') {
           document.documentElement.style.transition = 'padding 0.25s cubic-bezier(0.4, 0, 0.2, 1)';
@@ -494,16 +499,16 @@ else if (window === window.top) {
           document.documentElement.style.paddingLeft = '';
         }
 
-        this.browser.classList.remove('visible'); 
-        
+        this.browser.classList.remove('visible');
+
         setTimeout(() => {
           if (this.iframe) this.iframe.src = 'about:blank';
           if (this.host && this.host.parentNode) this.host.remove();
           activeWindows = activeWindows.filter(w => w !== this);
-          
+
           // SECURITY FIX: If no more previews are open, dynamically raise the shields again!
           if (activeWindows.length === 0) {
-              chrome.runtime.sendMessage({ action: "disable_bypass" });
+            chrome.runtime.sendMessage({ action: "disable_bypass" });
           }
         }, 250);
       }
@@ -677,34 +682,34 @@ else if (window === window.top) {
       const link = e.target.closest("a");
       if (link && link.href && checkModifier(e)) {
         activeHoverLink = link.href;
-        
+
         // Wait 75ms to ensure the user actually stopped on the link
         clearTimeout(preIntentTimer);
         preIntentTimer = setTimeout(() => {
-            if (activeHoverLink !== link.href) return; // User kept moving, abort!
-            
-            // NOW we wake up the service worker and drop the shields
-            chrome.runtime.sendMessage({ action: "enable_bypass" }, () => {
-                if (activeHoverLink !== link.href) return; 
-                
-                prefetchUrl(link.href); 
-                
-                clearTimeout(intentTimer);
-                // Reduce this from 300 to 225 since we already waited 75ms
-                intentTimer = setTimeout(() => {
-                  let targetWin = activeWindows.find(w => !w.isPinned && !w.isClosing);
-                  if (!targetWin) {
-                    if (!settings.hp_multipeak && activeWindows.filter(w => !w.isClosing).length > 0) {
-                        targetWin = activeWindows.find(w => !w.isClosing);
-                    } else { 
-                        targetWin = new GoPeakWindow(); 
-                        activeWindows.push(targetWin); 
-                    }
-                  }
-                  targetWin.preload(link.href, e.clientX, e.clientY);
-                  if (activeHoverLink === link.href) targetWin.show(); 
-                }, 225); 
-            });
+          if (activeHoverLink !== link.href) return; // User kept moving, abort!
+
+          // NOW we wake up the service worker and drop the shields
+          chrome.runtime.sendMessage({ action: "enable_bypass" }, () => {
+            if (activeHoverLink !== link.href) return;
+
+            prefetchUrl(link.href);
+
+            clearTimeout(intentTimer);
+            // Reduce this from 300 to 225 since we already waited 75ms
+            intentTimer = setTimeout(() => {
+              let targetWin = activeWindows.find(w => !w.isPinned && !w.isClosing);
+              if (!targetWin) {
+                if (!settings.hp_multipeak && activeWindows.filter(w => !w.isClosing).length > 0) {
+                  targetWin = activeWindows.find(w => !w.isClosing);
+                } else {
+                  targetWin = new GoPeakWindow();
+                  activeWindows.push(targetWin);
+                }
+              }
+              targetWin.preload(link.href, e.clientX, e.clientY);
+              if (activeHoverLink === link.href) targetWin.show();
+            }, 225);
+          });
         }, 75);
       }
     });
@@ -724,21 +729,21 @@ else if (window === window.top) {
       const selection = window.getSelection().toString().trim();
       if (selection) {
         const searchUrl = `https://www.google.com/search?igu=1&q=${encodeURIComponent(selection)}`;
-        
+
         // SECURITY FIX: Session rule injected right before Search selection load
         chrome.runtime.sendMessage({ action: "enable_bypass" }, () => {
-            prefetchUrl(searchUrl);
-            let targetWin = activeWindows.find(w => !w.isPinned && !w.isClosing);
-            if (!targetWin) {
-              if (!settings.hp_multipeak && activeWindows.filter(w => !w.isClosing).length > 0) {
-                targetWin = activeWindows.find(w => !w.isClosing);
-              } else {
-                targetWin = new GoPeakWindow();
-                activeWindows.push(targetWin);
-              }
+          prefetchUrl(searchUrl);
+          let targetWin = activeWindows.find(w => !w.isPinned && !w.isClosing);
+          if (!targetWin) {
+            if (!settings.hp_multipeak && activeWindows.filter(w => !w.isClosing).length > 0) {
+              targetWin = activeWindows.find(w => !w.isClosing);
+            } else {
+              targetWin = new GoPeakWindow();
+              activeWindows.push(targetWin);
             }
-            targetWin.preload(searchUrl, e.clientX, e.clientY);
-            targetWin.show();
+          }
+          targetWin.preload(searchUrl, e.clientX, e.clientY);
+          targetWin.show();
         });
       }
     });
