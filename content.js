@@ -252,11 +252,19 @@ else if (window === window.top) {
             .nav-btn { width: 16px; height: 16px; padding: 4px; border-radius: 4px; cursor: pointer; opacity: 0.6; transition: 0.15s; }
             .nav-btn:hover { background: rgba(128, 128, 128, 0.2); opacity: 1; }
 
-            #url-bar { 
-              flex-grow: 1; background: var(--url-bg, #e9e9e9); color: var(--url-color, #444); 
-              padding: 4px 12px; border-radius: 6px; font-size: 12px; text-align: center; 
-              white-space: nowrap; overflow: hidden; text-overflow: ellipsis; user-select: none; transition: 0.4s;
-            }
+           #url-bar { 
+  flex-grow: 1; background: var(--url-bg, #e9e9e9); color: var(--url-color, #444); 
+  padding: 4px 12px; border-radius: 6px; font-size: 12px; text-align: center; 
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: 0.4s;
+  border: none; outline: none; font-family: inherit; cursor: grab; width: 100%;
+  user-select: text;
+}
+#url-bar:focus {
+  background: #ffffff;
+  color: #1a1a1a;
+  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.3);
+  text-overflow: clip;
+}
             
             #iframe-container { flex-grow: 1; background: var(--iframe-bg, #ffffff); position: relative; overscroll-behavior: none; }
             iframe { width: 100%; height: 100%; border: none; background: transparent; }
@@ -274,7 +282,7 @@ else if (window === window.top) {
                 <svg class="nav-btn back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
                 <svg class="nav-btn forward" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
               </div>
-              <div id="url-bar">Loading...</div>
+              <input type="text" id="url-bar" value="Loading..." spellcheck="false" />
             </div>
             <div id="iframe-container">
               <div class="resize-handle"></div>
@@ -327,7 +335,7 @@ else if (window === window.top) {
 
         const wasVisible = this.isVisible;
         this.url = url;
-        try { this.urlBar.textContent = new URL(url).hostname; } catch { this.urlBar.textContent = url; }
+        try { this.urlBar.value = new URL(url).hostname; } catch { this.urlBar.value = url; }
 
         if (!wasVisible) {
           this.header.style.removeProperty('--header-bg');
@@ -526,6 +534,54 @@ else if (window === window.top) {
         this.shadow.querySelector('.back').addEventListener('click', () => this.securePostToIframe({ gopeak: 'goBack' }));
         this.shadow.querySelector('.forward').addEventListener('click', () => this.securePostToIframe({ gopeak: 'goForward' }));
 
+        this.urlBar.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        let url = this.urlBar.value.trim();
+        if (!url) return;
+        
+        // Auto-add https:// if no protocol
+        if (!/^https?:\/\//i.test(url)) {
+            url = 'https://' + url;
+        }
+        
+        this.url = url;
+        this.replaceIframe(url);
+        this.urlBar.blur();
+        
+        // Update display to hostname after navigation starts
+        try {
+            this.urlBar.value = new URL(url).hostname;
+        } catch {
+            this.urlBar.value = url;
+        }
+    }
+});
+
+this.urlBar.addEventListener('focus', () => {
+    // Show full URL when focused for editing
+    this.urlBar.value = this.url;
+    this.urlBar.select();
+});
+
+this.urlBar.addEventListener('blur', () => {
+    // Revert to hostname display when not focused
+    try {
+        this.urlBar.value = new URL(this.url).hostname;
+    } catch {
+        this.urlBar.value = this.url || 'Loading...';
+    }
+});
+
+this.urlBar.addEventListener('click', (e) => {
+    e.stopPropagation();
+    // Only focus if this was an intentional click, not the end of a drag
+    if (!this.isDraggingMotion) {
+        this.urlBar.focus();
+        this.urlBar.select();
+    }
+});
+
         this.bubble.addEventListener('click', () => {
           if (!this.isDraggingMotion) this.toggleMinimize();
         });
@@ -658,7 +714,7 @@ else if (window === window.top) {
       if (event.data.gopeak === 'themeAndUrl') {
         if (event.data.url !== targetWin.url) {
           targetWin.url = event.data.url;
-          try { targetWin.urlBar.textContent = new URL(targetWin.url).hostname; } catch { }
+          try { targetWin.urlBar.value = new URL(targetWin.url).hostname; } catch { }
         }
         if (settings.hp_theme) {
           targetWin.header.style.setProperty('--header-bg', event.data.color);
